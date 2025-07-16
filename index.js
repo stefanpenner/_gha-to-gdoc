@@ -67,14 +67,13 @@ function formatForGoogleDocs(data) {
   let content = '';
   
   // Title
-  content += '<h1>📊 GitHub Actions Workflow Analysis Report</h1>';
-  
-  // Executive Summary
-  content += `Workflow Name: <a href="${data.uri}">${data.title}</a></br>`;
-  content += `Analysis Date: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`;
-  
+  content += '';
+
+  const title = document.querySelector('#check-step-header-title').textContent.replace(/[\s]*/,'')
+  content += `<h4><a href="${document.location.href}">${title} [${formatDuration(data.durationMs)}]</a></h4>`
+ 
   // Performance Metrics
-  content += '<h2>⚡ METRICS</h2>';
+  content += '<h5>⚡ METRICS</h5>';
   content += `<ul>`
   content += `<li>Total Duration: ${formatDuration(data.durationMs)}</li>`;
   content += `<li>Average Step Duration: ${formatDuration(avgStepDuration)}</li>`;
@@ -88,11 +87,11 @@ function formatForGoogleDocs(data) {
   content += `</ul>`
   
   // Performance Insights
-  content += '<h2>💡 INSIGHTS</h2>';
+  content += '<h5>💡 INSIGHTS</h5>';
   content += "<ul>";
   
   if (longestStep.durationMs > avgStepDuration * 2) {
-    content += `<li>⚠️ The step "${longestStep.name}" took significantly longer than average (${formatDuration(longestStep.durationMs)} vs ${formatDuration(avgStepDuration)})</li>`;
+    content += `<li>⚠️ The step "${longestStep.name}" took significantly longer than the average in this run (${formatDuration(longestStep.durationMs)} vs ${formatDuration(avgStepDuration)})</li>`;
   }
   
   if (failedSteps > 0) {
@@ -119,7 +118,7 @@ function formatForGoogleDocs(data) {
     .sort((a, b) => b.durationMs - a.durationMs);
   
   if (timeConsumingSteps.length > 0) {
-    content += '<h2>🎯 TOP TIME-CONSUMING TASKS (>5% of total time)</h2>';
+    content += '<h5>🎯 TOP TIME-CONSUMING TASKS (>5% of total time)</h5>';
     const totalTimeConsuming = timeConsumingSteps.reduce((sum, step) => sum + step.durationMs, 0);
     const totalPercentage = (totalTimeConsuming / data.durationMs * 100).toFixed(1);
     content += `📊 These ${timeConsumingSteps.length} steps consume ${totalPercentage}% of total workflow time`;
@@ -137,7 +136,7 @@ function formatForGoogleDocs(data) {
     const totalOtherTime = otherSteps.reduce((sum, step) => sum + step.durationMs, 0);
     const otherPercentage = (totalOtherTime / data.durationMs * 100).toFixed(1);
     
-    content += '<h2>📌 OTHER STEPS (papercuts - <5% each)</h2>';
+    content += '<h5>📌 OTHER STEPS (papercuts - <5% each)</h5>';
     content += `${otherSteps.length} steps totaling ${formatDuration(totalOtherTime)} (${otherPercentage}% of total time)`;
     content += "<ul>"
     
@@ -154,7 +153,7 @@ function formatForGoogleDocs(data) {
       otherSteps.slice(0, 5).forEach((step, index) => {
         const statusEmoji = getStatusEmoji(step.conclusion);
         const percentage = (step.durationMs / data.durationMs * 100).toFixed(1);
-        content += `<li> ${statusEmoji} ${step.name} (${percentage}% - ${formatDuration(step.durationMs)})</li>`;
+        content += `<li> ${statusEmoji} <a href="${step.url}">${step.name}</a> (${percentage}% - ${formatDuration(step.durationMs)})</li>`;
       });
       content += `  <li>... and ${otherSteps.length - 5} more steps</li>`;
     }
@@ -162,7 +161,7 @@ function formatForGoogleDocs(data) {
   }
 
   // Notes
-  content += '<h2>📝 NOTES</h2>';
+  content += '<h5>📝 NOTES</h5>';
   content += '<ul>'
   content += '<li>This report was generated automatically from GitHub Actions data</li>';
   content += '<li>Duration calculations are based on step start/end timestamps</li>';
