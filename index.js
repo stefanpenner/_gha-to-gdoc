@@ -63,41 +63,47 @@ function formatForGoogleDocs(data) {
   const longestStep = data.steps.reduce((max, step) => step.durationMs > max.durationMs ? step : max, data.steps[0]);
   const shortestStep = data.steps.reduce((min, step) => step.durationMs < min.durationMs ? step : min, data.steps[0]);
 
-  // Create formatted text with clear section breaks
-  let doc = `📊 GitHub Actions Workflow Analysis Report\n\n`;
+  // Create hybrid format with HTML headers and plain text content
+  let content = '';
+  
+  // Title
+  content += '<h1>📊 GitHub Actions Workflow Analysis Report</h1>';
   
   // Executive Summary
-  doc += `Workflow Name: ${data.title}\n`;
-  doc += `Workflow URL: ${data.uri}\n`;
-  doc += `Analysis Date: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}\n\n`;
+  content += `Workflow Name: <a href="${data.uri}">${data.title}</a></br>`;
+  content += `Analysis Date: ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`;
   
   // Performance Metrics
-  doc += `⚡ METRICS\n\n`;
-  doc += `Total Duration: ${formatDuration(data.durationMs)}\n`;
-  doc += `Average Step Duration: ${formatDuration(avgStepDuration)}\n`;
-  doc += `Longest Step: ${longestStep.name} (${formatDuration(longestStep.durationMs)})\n`;
-  doc += `Shortest Step: ${shortestStep.name} (${formatDuration(shortestStep.durationMs)})\n`;
-  doc += `Total Steps: ${totalSteps}\n`;
-  doc += `✅ Successful: ${successfulSteps} (${Math.round(successfulSteps/totalSteps*100)}%)\n`;
-  doc += `❌ Failed: ${failedSteps} (${Math.round(failedSteps/totalSteps*100)}%)\n`;
-  doc += `⏹️ Cancelled: ${cancelledSteps} (${Math.round(cancelledSteps/totalSteps*100)}%)\n`;
-  doc += `⏭️ Skipped: ${skippedSteps} (${Math.round(skippedSteps/totalSteps*100)}%)\n\n`;
+  content += '<h2>⚡ METRICS</h2>';
+  content += `<ul>`
+  content += `<li>Total Duration: ${formatDuration(data.durationMs)}</li>`;
+  content += `<li>Average Step Duration: ${formatDuration(avgStepDuration)}</li>`;
+  content += `<li>Longest Step: ${longestStep.name} (${formatDuration(longestStep.durationMs)})</li>`;
+  content += `<li>Shortest Step: ${shortestStep.name} (${formatDuration(shortestStep.durationMs)})</li>`;
+  content += `<li>Total Steps: ${totalSteps}</li>`;
+  content += `<li>✅ Successful: ${successfulSteps} (${Math.round(successfulSteps/totalSteps*100)}%)</li>`;
+  content += `<li>❌ Failed: ${failedSteps} (${Math.round(failedSteps/totalSteps*100)}%)</li>`;
+  content += `<li>⏹️ Cancelled: ${cancelledSteps} (${Math.round(cancelledSteps/totalSteps*100)}%)</li>`;
+  content += `<li>⏭️ Skipped: ${skippedSteps} (${Math.round(skippedSteps/totalSteps*100)}%)</li>`;
+  content += `</ul>`
   
   // Performance Insights
-  doc += `💡 INSIGHTS\n\n`;
+  content += '<h2>💡 INSIGHTS</h2>';
+  content += "<ul>";
   
   if (longestStep.durationMs > avgStepDuration * 2) {
-    doc += `• ⚠️ The step "${longestStep.name}" took significantly longer than average (${formatDuration(longestStep.durationMs)} vs ${formatDuration(avgStepDuration)})\n`;
+    content += `<li>⚠️ The step "${longestStep.name}" took significantly longer than average (${formatDuration(longestStep.durationMs)} vs ${formatDuration(avgStepDuration)})</li>`;
   }
   
   if (failedSteps > 0) {
-    doc += `• 🔍 ${failedSteps} step(s) failed - review logs for potential issues\n`;
+    content += `<li>🔍 ${failedSteps} step(s) failed - review logs for potential issues</li>`;
   }
   
   if (skippedSteps > 0) {
-    doc += `• ℹ️ ${skippedSteps} step(s) were skipped - verify this is expected behavior\n`;
+    content += `<li>ℹ️ ${skippedSteps} step(s) were skipped - verify this is expected behavior</li>`;
   }
   
+  content += "</ul>";
   // Top Time-Consuming Tasks Analysis
   const fivePercentThreshold = data.durationMs * 0.05;
   const timeConsumingSteps = data.steps
@@ -113,16 +119,17 @@ function formatForGoogleDocs(data) {
     .sort((a, b) => b.durationMs - a.durationMs);
   
   if (timeConsumingSteps.length > 0) {
-    doc += `\n🎯 TOP TIME-CONSUMING TASKS (>5% of total time)\n\n`;
-    
-    timeConsumingSteps.forEach((step, index) => {
-      const statusEmoji = getStatusEmoji(step.conclusion);
-      doc += `${index + 1}. ${statusEmoji} ${step.name} (${step.percentage}% - ${formatDuration(step.durationMs)})\n`;
-    });
-    
+    content += '<h2>🎯 TOP TIME-CONSUMING TASKS (>5% of total time)</h2>';
     const totalTimeConsuming = timeConsumingSteps.reduce((sum, step) => sum + step.durationMs, 0);
     const totalPercentage = (totalTimeConsuming / data.durationMs * 100).toFixed(1);
-    doc += `\n📊 These ${timeConsumingSteps.length} steps consume ${totalPercentage}% of total workflow time\n`;
+    content += `📊 These ${timeConsumingSteps.length} steps consume ${totalPercentage}% of total workflow time`;
+    content += "<ul>" 
+    timeConsumingSteps.forEach((step, index) => {
+      const statusEmoji = getStatusEmoji(step.conclusion);
+      content += `<li> ${statusEmoji} <a href="${step.url}">${step.name}</a> (${step.percentage}% - ${formatDuration(step.durationMs)})</li>`;
+    });
+    content += "</ul>" 
+    
   }
   
   // Other steps (papercuts)
@@ -130,48 +137,39 @@ function formatForGoogleDocs(data) {
     const totalOtherTime = otherSteps.reduce((sum, step) => sum + step.durationMs, 0);
     const otherPercentage = (totalOtherTime / data.durationMs * 100).toFixed(1);
     
-    doc += `\n📌 OTHER STEPS (papercuts - <5% each)\n\n`;
-    doc += `• ${otherSteps.length} steps totaling ${formatDuration(totalOtherTime)} (${otherPercentage}% of total time)\n`;
+    content += '<h2>📌 OTHER STEPS (papercuts - <5% each)</h2>';
+    content += `${otherSteps.length} steps totaling ${formatDuration(totalOtherTime)} (${otherPercentage}% of total time)`;
+    content += "<ul>"
     
     if (otherSteps.length <= 10) {
       // Show all other steps if there are 10 or fewer
       otherSteps.forEach((step, index) => {
         const statusEmoji = getStatusEmoji(step.conclusion);
         const percentage = (step.durationMs / data.durationMs * 100).toFixed(1);
-        doc += `  ${index + 1}. ${statusEmoji} ${step.name} (${percentage}% - ${formatDuration(step.durationMs)})\n`;
+        content += `<li> ${statusEmoji} <a href="${step.url}">${step.name}</a> (${percentage}% - ${formatDuration(step.durationMs)})</li>`;
       });
     } else {
       // Show top 5 other steps if there are more than 10
-      doc += `• Top 5 other steps:\n`;
+      content += '<li>Top 5 other steps:</li>';
       otherSteps.slice(0, 5).forEach((step, index) => {
         const statusEmoji = getStatusEmoji(step.conclusion);
         const percentage = (step.durationMs / data.durationMs * 100).toFixed(1);
-        doc += `  ${index + 1}. ${statusEmoji} ${step.name} (${percentage}% - ${formatDuration(step.durationMs)})\n`;
+        content += `<li> ${statusEmoji} ${step.name} (${percentage}% - ${formatDuration(step.durationMs)})</li>`;
       });
-      doc += `  ... and ${otherSteps.length - 5} more steps\n`;
+      content += `  <li>... and ${otherSteps.length - 5} more steps</li>`;
     }
+    content += "</ul>"
   }
 
-   // Detailed Step Analysis
-   // doc += `🔍 DETAILED STEP ANALYSIS\n\n`;
-   //
-   // data.steps.forEach((step, index) => {
-   //   const statusEmoji = getStatusEmoji(step.conclusion);
-   //   const stepNumber = String(index + 1).padStart(2, '0');
-   //   const startedTime = new Date(step.startedAt).toLocaleTimeString();
-   //   const completedTime = new Date(step.completedAt).toLocaleTimeString();
-   //
-   //   doc += `${stepNumber}. ${statusEmoji} ${step.name} | ${step.conclusion || 'Unknown'} | ${formatDuration(step.durationMs)} | ${startedTime} → ${completedTime}\n`;
-   // });
-   
-   doc += `\n`;
-
-  doc += `\n📝 NOTES\n\n`;
-  doc += `• This report was generated automatically from GitHub Actions data\n`;
-  doc += `• Duration calculations are based on step start/end timestamps\n`;
-  doc += `• Status emojis: ✅ Success, ❌ Failure, ⏹️ Cancelled, ⏭️ Skipped, ❓ Unknown\n`;
+  // Notes
+  content += '<h2>📝 NOTES</h2>';
+  content += '<ul>'
+  content += '<li>This report was generated automatically from GitHub Actions data</li>';
+  content += '<li>Duration calculations are based on step start/end timestamps</li>';
+  content += '<li>Status emojis: ✅ Success, ❌ Failure, ⏹️ Cancelled, ⏭️ Skipped, ❓ Unknown</li>';
+  content += '</ul>'
   
-  return doc;
+  return content;
 }
 
 function formatForGoogleSheets(data) {
@@ -228,8 +226,25 @@ function formatForGoogleSheetsCSV(data) {
   return csv;
 }
 
-function copyToClipboard(text, isHtml = false) {
-  if (isHtml) {
+function copyToClipboard(text, isHtml = false, isRtf = false) {
+  if (isRtf) {
+    // For RTF content, create a rich text clipboard item
+    const rtfBlob = new Blob([text], { type: 'application/rtf' });
+    const textBlob = new Blob([text.replace(/\\[^\\]*\\/g, '')], { type: 'text/plain' });
+    
+    const clipboardItem = new ClipboardItem({
+      'application/rtf': rtfBlob,
+      'text/plain': textBlob
+    });
+    
+    navigator.clipboard.write([clipboardItem]).then(() => {
+      console.log('RTF data copied to clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy RTF to clipboard:', err);
+      // Fallback to plain text
+      copyToClipboard(text.replace(/\\[^\\]*\\/g, ''), false, false);
+    });
+  } else if (isHtml) {
     // For HTML content, create a rich text clipboard item
     const htmlBlob = new Blob([text], { type: 'text/html' });
     const textBlob = new Blob([text.replace(/<[^>]*>/g, '')], { type: 'text/plain' });
@@ -244,7 +259,7 @@ function copyToClipboard(text, isHtml = false) {
     }).catch(err => {
       console.error('Failed to copy rich text to clipboard:', err);
       // Fallback to plain text
-      copyToClipboard(text.replace(/<[^>]*>/g, ''), false);
+      copyToClipboard(text.replace(/<[^>]*>/g, ''), false, false);
     });
   } else {
     navigator.clipboard.writeText(text).then(() => {
@@ -299,7 +314,7 @@ function getDataForGoogleSheetsCSV() {
 // Copy functions for easy use
 function copyForGoogleDocs() {
   const formatted = getDataForGoogleDocs();
-  copyToClipboard(formatted);
+  copyToClipboard(formatted, true, false);
 }
 
 function copyForGoogleSheets() {
